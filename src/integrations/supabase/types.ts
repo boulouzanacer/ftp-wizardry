@@ -16,36 +16,36 @@ export type Database = {
     Tables: {
       access_logs: {
         Row: {
-          action: string
+          action: Database["public"]["Enums"]["log_action"]
+          client_ip: unknown | null
           error_message: string | null
-          filename: string | null
-          ftp_user_id: string
+          file_path: string | null
+          ftp_user_id: string | null
           id: string
-          ip_address: unknown | null
-          success: boolean
-          timestamp: string
+          success: boolean | null
+          timestamp: string | null
           user_agent: string | null
         }
         Insert: {
-          action: string
+          action: Database["public"]["Enums"]["log_action"]
+          client_ip?: unknown | null
           error_message?: string | null
-          filename?: string | null
-          ftp_user_id: string
+          file_path?: string | null
+          ftp_user_id?: string | null
           id?: string
-          ip_address?: unknown | null
-          success?: boolean
-          timestamp?: string
+          success?: boolean | null
+          timestamp?: string | null
           user_agent?: string | null
         }
         Update: {
-          action?: string
+          action?: Database["public"]["Enums"]["log_action"]
+          client_ip?: unknown | null
           error_message?: string | null
-          filename?: string | null
-          ftp_user_id?: string
+          file_path?: string | null
+          ftp_user_id?: string | null
           id?: string
-          ip_address?: unknown | null
-          success?: boolean
-          timestamp?: string
+          success?: boolean | null
+          timestamp?: string | null
           user_agent?: string | null
         }
         Relationships: [
@@ -60,76 +60,151 @@ export type Database = {
       }
       ftp_users: {
         Row: {
-          created_at: string
+          allowed_ips: string[] | null
+          created_at: string | null
           created_by: string | null
-          end_date: string
+          end_date: string | null
+          home_directory: string
           id: string
-          is_active: boolean
-          password: string
+          is_active: boolean | null
+          max_connections: number | null
+          password_hash: string
           quota_mb: number | null
-          start_date: string
-          updated_at: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["user_status"] | null
+          updated_at: string | null
           used_space_mb: number | null
           username: string
         }
         Insert: {
-          created_at?: string
+          allowed_ips?: string[] | null
+          created_at?: string | null
           created_by?: string | null
-          end_date: string
+          end_date?: string | null
+          home_directory: string
           id?: string
-          is_active?: boolean
-          password: string
+          is_active?: boolean | null
+          max_connections?: number | null
+          password_hash: string
           quota_mb?: number | null
-          start_date?: string
-          updated_at?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["user_status"] | null
+          updated_at?: string | null
           used_space_mb?: number | null
           username: string
         }
         Update: {
-          created_at?: string
+          allowed_ips?: string[] | null
+          created_at?: string | null
           created_by?: string | null
-          end_date?: string
+          end_date?: string | null
+          home_directory?: string
           id?: string
-          is_active?: boolean
-          password?: string
+          is_active?: boolean | null
+          max_connections?: number | null
+          password_hash?: string
           quota_mb?: number | null
-          start_date?: string
-          updated_at?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["user_status"] | null
+          updated_at?: string | null
           used_space_mb?: number | null
           username?: string
         }
         Relationships: []
       }
-      user_files: {
+      profiles: {
         Row: {
-          file_path: string
-          file_size_mb: number
-          filename: string
-          ftp_user_id: string
+          created_at: string | null
+          email: string | null
+          full_name: string | null
           id: string
-          last_accessed: string | null
-          mime_type: string | null
-          uploaded_at: string
+          updated_at: string | null
+          username: string
         }
         Insert: {
-          file_path: string
-          file_size_mb?: number
-          filename: string
-          ftp_user_id: string
-          id?: string
-          last_accessed?: string | null
-          mime_type?: string | null
-          uploaded_at?: string
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+          username: string
         }
         Update: {
-          file_path?: string
-          file_size_mb?: number
-          filename?: string
-          ftp_user_id?: string
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
+      server_status: {
+        Row: {
+          current_connections: number | null
+          id: string
+          is_running: boolean | null
+          last_restart: string | null
+          max_connections: number | null
+          port: number | null
+          server_name: string
+          start_time: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          current_connections?: number | null
+          id?: string
+          is_running?: boolean | null
+          last_restart?: string | null
+          max_connections?: number | null
+          port?: number | null
+          server_name?: string
+          start_time?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          current_connections?: number | null
+          id?: string
+          is_running?: boolean | null
+          last_restart?: string | null
+          max_connections?: number | null
+          port?: number | null
+          server_name?: string
+          start_time?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_files: {
+        Row: {
+          file_name: string
+          file_path: string
+          file_size_mb: number
+          file_type: string | null
+          ftp_user_id: string | null
+          id: string
+          last_accessed: string | null
+          uploaded_at: string | null
+        }
+        Insert: {
+          file_name: string
+          file_path: string
+          file_size_mb: number
+          file_type?: string | null
+          ftp_user_id?: string | null
           id?: string
           last_accessed?: string | null
-          mime_type?: string | null
-          uploaded_at?: string
+          uploaded_at?: string | null
+        }
+        Update: {
+          file_name?: string
+          file_path?: string
+          file_size_mb?: number
+          file_type?: string | null
+          ftp_user_id?: string | null
+          id?: string
+          last_accessed?: string | null
+          uploaded_at?: string | null
         }
         Relationships: [
           {
@@ -140,33 +215,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      users: {
-        Row: {
-          created_at: string
-          folder_path: string | null
-          id: number
-          password: string | null
-          statut: number | null
-          username: string | null
-        }
-        Insert: {
-          created_at?: string
-          folder_path?: string | null
-          id?: number
-          password?: string | null
-          statut?: number | null
-          username?: string | null
-        }
-        Update: {
-          created_at?: string
-          folder_path?: string | null
-          id?: number
-          password?: string | null
-          statut?: number | null
-          username?: string | null
-        }
-        Relationships: []
       }
     }
     Views: {
@@ -179,7 +227,15 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      log_action:
+        | "login"
+        | "logout"
+        | "upload"
+        | "download"
+        | "delete"
+        | "mkdir"
+        | "rmdir"
+      user_status: "active" | "inactive" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -306,6 +362,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      log_action: [
+        "login",
+        "logout",
+        "upload",
+        "download",
+        "delete",
+        "mkdir",
+        "rmdir",
+      ],
+      user_status: ["active", "inactive", "suspended"],
+    },
   },
 } as const
