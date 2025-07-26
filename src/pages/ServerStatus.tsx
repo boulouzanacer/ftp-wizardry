@@ -3,10 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, Square, RotateCcw, Server, Users, HardDrive, Activity } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ServerStatus() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
   const { data: serverStatus, isLoading } = useQuery({
     queryKey: ['server-status'],
     queryFn: async () => {
@@ -44,6 +48,72 @@ export default function ServerStatus() {
       };
     }
   });
+
+  const serverControlMutation = useMutation({
+    mutationFn: async (action: 'start' | 'stop' | 'restart') => {
+      const now = new Date().toISOString();
+      
+      if (!serverStatus) {
+        // Create initial server status record if none exists
+        const { data, error } = await supabase
+          .from('server_status')
+          .insert({
+            is_running: action === 'start',
+            start_time: action === 'start' ? now : null,
+            last_restart: action === 'restart' ? now : null,
+            updated_at: now
+          })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return data;
+      } else {
+        // Update existing server status
+        const updateData: any = {
+          is_running: action !== 'stop',
+          updated_at: now
+        };
+        
+        if (action === 'start') {
+          updateData.start_time = now;
+        } else if (action === 'restart') {
+          updateData.last_restart = now;
+          updateData.start_time = now;
+        } else if (action === 'stop') {
+          updateData.start_time = null;
+        }
+        
+        const { data, error } = await supabase
+          .from('server_status')
+          .update(updateData)
+          .eq('id', serverStatus.id)
+          .select()
+          .single();
+        
+        if (error) throw error;
+        return data;
+      }
+    },
+    onSuccess: (data, action) => {
+      queryClient.invalidateQueries({ queryKey: ['server-status'] });
+      toast({
+        title: "Server action completed",
+        description: `Server has been ${action === 'start' ? 'started' : action === 'stop' ? 'stopped' : 'restarted'}.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to control server. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleServerAction = (action: 'start' | 'stop' | 'restart') => {
+    serverControlMutation.mutate(action);
+  };
 
   const formatStorage = (mb: number) => {
     if (mb >= 1024) {
@@ -95,20 +165,31 @@ export default function ServerStatus() {
                 </div>
               </div>
               
-              <div className="flex gap-2">
+                <div className="flex gap-2">
                 {serverStatus?.is_running ? (
                   <>
-                    <Button variant="outline">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => handleServerAction('restart')}
+                      disabled={serverControlMutation.isPending}
+                    >
                       <RotateCcw className="mr-2 h-4 w-4" />
                       Restart
                     </Button>
-                    <Button variant="destructive">
+                    <Button 
+                      variant="destructive"
+                      onClick={() => handleServerAction('stop')}
+                      disabled={serverControlMutation.isPending}
+                    >
                       <Square className="mr-2 h-4 w-4" />
                       Stop
                     </Button>
                   </>
                 ) : (
-                  <Button>
+                  <Button 
+                    onClick={() => handleServerAction('start')}
+                    disabled={serverControlMutation.isPending}
+                  >
                     <Play className="mr-2 h-4 w-4" />
                     Start
                   </Button>
