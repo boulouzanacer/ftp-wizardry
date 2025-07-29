@@ -72,6 +72,7 @@ export type Database = {
           quota_mb: number | null
           start_date: string | null
           status: Database["public"]["Enums"]["user_status"] | null
+          system_username: string | null
           updated_at: string | null
           used_space_mb: number | null
           username: string
@@ -89,6 +90,7 @@ export type Database = {
           quota_mb?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
+          system_username?: string | null
           updated_at?: string | null
           used_space_mb?: number | null
           username: string
@@ -106,6 +108,7 @@ export type Database = {
           quota_mb?: number | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["user_status"] | null
+          system_username?: string | null
           updated_at?: string | null
           used_space_mb?: number | null
           username?: string
@@ -221,6 +224,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      hash_password: {
+        Args: { plain_password: string }
+        Returns: string
+      }
       is_ftp_user_active: {
         Args: { user_id: string }
         Returns: boolean
