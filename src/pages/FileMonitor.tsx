@@ -30,7 +30,9 @@ export default function FileMonitor() {
 
   const syncFilesMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('sync-ftp-files');
+      const { data, error } = await supabase.functions.invoke('sync-ftp-files', {
+        method: 'GET'
+      });
       if (error) throw error;
       return data;
     },
