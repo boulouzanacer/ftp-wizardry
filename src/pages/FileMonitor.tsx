@@ -19,7 +19,7 @@ export default function FileMonitor() {
         .from('user_files')
         .select(`
           *,
-          ftp_users!inner(username, home_directory)
+          ftp_users(username, home_directory)
         `)
         .order('uploaded_at', { ascending: false });
       
