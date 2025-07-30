@@ -1,1 +1,4 @@
 project_id = "gasbrtqkyjxhoycimhgs"
+
+[functions.sync-ftp-files]
+verify_jwt = false
