@@ -25,88 +25,112 @@ Deno.serve(async (req) => {
     )
 
     if (req.method === 'POST') {
-      // Handle file upload notification
-      const uploadData: FileUpload = await req.json()
+      try {
+        // Handle file upload notification
+        const uploadData: FileUpload = await req.json()
+        
+        console.log('Received file upload notification:', uploadData)
+
+        // Find the FTP user
+        const { data: ftpUser, error: userError } = await supabaseClient
+          .from('ftp_users')
+          .select('id')
+          .eq('username', uploadData.username)
+          .single()
+
+        if (userError || !ftpUser) {
+          console.error('FTP user not found:', uploadData.username)
+          return new Response(JSON.stringify({ 
+            error: 'User not found' 
+          }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Check if file already exists
+        const { data: existingFile } = await supabaseClient
+          .from('user_files')
+          .select('id')
+          .eq('ftp_user_id', ftpUser.id)
+          .eq('file_path', uploadData.filepath)
+          .single()
+
+        if (existingFile) {
+          console.log('File already exists in database')
+          return new Response(JSON.stringify({ 
+            message: 'File already tracked' 
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        // Insert new file record
+        const { error: insertError } = await supabaseClient
+          .from('user_files')
+          .insert({
+            ftp_user_id: ftpUser.id,
+            file_name: uploadData.filename,
+            file_path: uploadData.filepath,
+            file_size_mb: uploadData.filesize / (1024 * 1024),
+            file_type: getFileType(uploadData.filename),
+            uploaded_at: uploadData.timestamp || new Date().toISOString()
+          })
+
+        if (insertError) {
+          console.error('Error inserting file record:', insertError)
+          return new Response(JSON.stringify({ 
+            error: insertError.message 
+          }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          })
+        }
+
+        console.log('File record inserted successfully')
+        return new Response(JSON.stringify({ 
+          success: true,
+          message: 'File tracked successfully' 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError)
+        return new Response(JSON.stringify({ 
+          error: 'Invalid JSON data' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+    }
+
+    // Handle manual sync (for testing) - This is triggered by the Sync Files button
+    if (req.method === 'GET') {
+      console.log('Creating test file records...')
       
-      console.log('Received file upload notification:', uploadData)
-
-      // Find the FTP user
-      const { data: ftpUser, error: userError } = await supabaseClient
+      // Get all active FTP users
+      const { data: ftpUsers, error: usersError } = await supabaseClient
         .from('ftp_users')
-        .select('id')
-        .eq('username', uploadData.username)
-        .single()
+        .select('id, username')
+        .eq('is_active', true)
 
-      if (userError || !ftpUser) {
-        console.error('FTP user not found:', uploadData.username)
+      if (usersError) {
+        console.error('Error fetching users:', usersError)
         return new Response(JSON.stringify({ 
-          error: 'User not found' 
-        }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      }
-
-      // Check if file already exists
-      const { data: existingFile } = await supabaseClient
-        .from('user_files')
-        .select('id')
-        .eq('ftp_user_id', ftpUser.id)
-        .eq('file_path', uploadData.filepath)
-        .single()
-
-      if (existingFile) {
-        console.log('File already exists in database')
-        return new Response(JSON.stringify({ 
-          message: 'File already tracked' 
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      }
-
-      // Insert new file record
-      const { error: insertError } = await supabaseClient
-        .from('user_files')
-        .insert({
-          ftp_user_id: ftpUser.id,
-          file_name: uploadData.filename,
-          file_path: uploadData.filepath,
-          file_size_mb: uploadData.filesize / (1024 * 1024),
-          file_type: getFileType(uploadData.filename),
-          uploaded_at: uploadData.timestamp || new Date().toISOString()
-        })
-
-      if (insertError) {
-        console.error('Error inserting file record:', insertError)
-        return new Response(JSON.stringify({ 
-          error: insertError.message 
+          error: usersError.message 
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
 
-      console.log('File record inserted successfully')
-      return new Response(JSON.stringify({ 
-        success: true,
-        message: 'File tracked successfully' 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // Handle manual sync (for testing)
-    if (req.method === 'GET') {
-      // Create some test file records for demonstration
-      const { data: ftpUsers } = await supabaseClient
-        .from('ftp_users')
-        .select('id, username')
-        .eq('is_active', true)
-
       const testFiles = [
         { name: 'test-image.jpg', size: 2048000, type: 'image/jpeg' },
         { name: 'document.pdf', size: 1024000, type: 'application/pdf' },
-        { name: 'data.txt', size: 512000, type: 'text/plain' }
+        { name: 'data.txt', size: 512000, type: 'text/plain' },
+        { name: 'video.mp4', size: 5120000, type: 'video/mp4' },
+        { name: 'presentation.pptx', size: 3072000, type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' }
       ]
 
       let insertedCount = 0
@@ -121,7 +145,7 @@ Deno.serve(async (req) => {
             .select('id')
             .eq('ftp_user_id', user.id)
             .eq('file_path', filePath)
-            .single()
+            .maybeSingle()
 
           if (!existing) {
             const { error } = await supabaseClient
@@ -135,14 +159,22 @@ Deno.serve(async (req) => {
                 uploaded_at: new Date().toISOString()
               })
 
-            if (!error) insertedCount++
+            if (!error) {
+              insertedCount++
+              console.log(`Inserted file: ${testFile.name} for user: ${user.username}`)
+            } else {
+              console.error(`Error inserting file ${testFile.name}:`, error)
+            }
           }
         }
       }
 
+      console.log(`Successfully created ${insertedCount} test file records`)
+      
       return new Response(JSON.stringify({ 
         success: true,
-        message: `Created ${insertedCount} test file records` 
+        message: `Created ${insertedCount} test file records`,
+        usersProcessed: ftpUsers?.length || 0
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -180,7 +212,8 @@ function getFileType(filename: string): string {
     'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'zip': 'application/zip',
     'mp4': 'video/mp4',
-    'mp3': 'audio/mpeg'
+    'mp3': 'audio/mpeg',
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
   }
   
   return typeMap[ext || ''] || 'application/octet-stream'
