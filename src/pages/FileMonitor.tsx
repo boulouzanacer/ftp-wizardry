@@ -3,11 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, FileText, Folder, Download, Trash2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Search, FileText, Folder, Download, Trash2, RefreshCw } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function FileMonitor() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const { data: userFiles, isLoading } = useQuery({
     queryKey: ['user-files'],
     queryFn: async () => {
@@ -21,6 +25,29 @@ export default function FileMonitor() {
       
       if (error) throw error;
       return data;
+    }
+  });
+
+  const syncFilesMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('sync-ftp-files');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['user-files'] });
+      const totalNew = data.results?.reduce((sum: number, result: any) => sum + (result.newFiles || 0), 0) || 0;
+      toast({
+        title: "Files synced successfully",
+        description: `Found ${totalNew} new files`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Sync failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   });
 
@@ -54,6 +81,13 @@ export default function FileMonitor() {
               Monitor and manage files uploaded by FTP users
             </p>
           </div>
+          <Button 
+            onClick={() => syncFilesMutation.mutate()}
+            disabled={syncFilesMutation.isPending}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${syncFilesMutation.isPending ? 'animate-spin' : ''}`} />
+            {syncFilesMutation.isPending ? 'Syncing...' : 'Sync Files'}
+          </Button>
         </div>
 
         <Card>
